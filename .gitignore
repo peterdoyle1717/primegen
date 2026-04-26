@@ -1,0 +1,8 @@
+bin/
+data/seed/
+data/prime/
+run/tmp/
+run/logs/
+run/shards/
+*.o
+.DS_Store
