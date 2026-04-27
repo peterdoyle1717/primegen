@@ -120,6 +120,10 @@ The seed side of the pipeline uses `buckygen` and fullerene-dual generation idea
 
 This repository is a project tool: small, direct, and intended to be read.
 
+## Provenance
+
+The code and documentation in this repository were drafted primarily with Claude Code under the author's direction, with additional advice, review, and supervision from ChatGPT.
+
 ## License
 
 MIT. See `LICENSE`.
