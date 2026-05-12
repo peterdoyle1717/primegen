@@ -1,7 +1,9 @@
 # primegen — generate prime neoplatonic triangulations by recurrence
 #
-#   prime(v) = grow(prime(v-1)) ∪ seed(v),  v ≥ 6
-#   prime(4) = { CCAE }   (tetrahedron)
+#   prime(v) = grow(prime(v-1)) ∪ seed(v),  v ≥ 7
+#   prime(4) = { CCAE }     (tetrahedron, hand-seeded)
+#   prime(5) = ∅            (no v=5 prime 6-nets)
+#   prime(6) = { CCCACAAE } (octahedron, hand-seeded)
 #
 # Usage:
 #   make                    build tools
@@ -83,35 +85,42 @@ seeds: tools
 	done
 
 # ── Primes ───────────────────────────────────────────────────────────────
-# Recurrence: prime(v) = sort -u [ grow(prime(v-1)) + seed(v) ]
-# Base case: prime(4) = CCAE.  v=5 has 0 primes (skipped).
+# Recurrence: prime(v) = sort -u [ grow(prime(v-1)) + seed(v) ],  v ≥ 7.
+# Hand-seeded base cases: prime(4)=CCAE, prime(5)=∅, prime(6)=CCCACAAE.
+# See docs/PRIMEGEN_BASE_CASES.md.
 
 primes: tools seeds
 	@mkdir -p $(PRIME_DIR) $(TMP_DIR) $(LOG_DIR)
+	@# Hand-seeded base cases.  buckygen produces no fullerene-dual seeds at
+	@# v=4..6 that satisfy primegen's max-degree-6 filter, so the three small
+	@# primes that exist (tetrahedron at v=4, octahedron at v=6) and the
+	@# empty v=5 must be inserted by hand.  The recurrence
+	@#   prime(v) = grow(prime(v-1)) ∪ seed(v)
+	@# then runs for v ≥ 7.  See docs/PRIMEGEN_BASE_CASES.md.
 	@if [ ! -f $(PRIME_DIR)/4.txt.gz ]; then \
 	  echo "CCAE" | gzip > $(PRIME_DIR)/4.txt.gz; \
-	  echo "prime v=4: 1"; \
+	  echo "prime v=4: 1 (tetrahedron base case)"; \
 	fi
 	@if [ ! -f $(PRIME_DIR)/5.txt.gz ]; then \
 	  printf '' | gzip > $(PRIME_DIR)/5.txt.gz; \
-	  echo "prime v=5: 0"; \
+	  echo "prime v=5: 0 (empty base case)"; \
 	fi
-	@for v in $$(seq 4 $$(($(VMAX) - 1))); do \
+	@# Rewrite v=6 if it is missing or empty (e.g. left empty by an older
+	@# primegen that lacked this base case).  We check content, not file size,
+	@# because gzip-of-empty is ~20 bytes — `[ -s ]` cannot distinguish it.
+	@if [ ! -f $(PRIME_DIR)/6.txt.gz ] || \
+	   [ "$$($(ZC) $(PRIME_DIR)/6.txt.gz | wc -l)" -eq 0 ]; then \
+	  echo "CCCACAAE" | gzip > $(PRIME_DIR)/6.txt.gz; \
+	  echo "prime v=6: 1 (octahedron base case; canonical CLERS from clers_name)"; \
+	fi
+	@# Recurrence loop: produces prime(7..VMAX) from grow(prime(v)) ∪ seed(v+1).
+	@for v in $$(seq 6 $$(($(VMAX) - 1))); do \
 	  vn=$$((v + 1)); \
-	  [ $$vn -eq 5 ] && continue; \
 	  out=$(PRIME_DIR)/$$vn.txt.gz; \
 	  [ -f "$$out" ] && [ -s "$$out" ] && continue; \
 	  src=$(PRIME_DIR)/$$v.txt.gz; \
 	  [ -f "$$src" ] || { echo "prime v=$$v missing, stopping"; break; }; \
 	  nlines=$$($(ZC) "$$src" | wc -l); \
-	  if [ $$nlines -eq 0 ]; then \
-	    echo "grow v=$$v -> v=$$vn (empty source; prime(vn) = seed(vn)) ..."; \
-	    { $(ZC) $(SEED_DIR)/$$vn.txt.gz 2>/dev/null || true; } | sort -T $(TMP_DIR) -u | gzip > "$${out}.tmp"; \
-	    mv "$${out}.tmp" "$$out"; \
-	    n=$$($(ZC) "$$out" | wc -l); \
-	    echo "  prime v=$$vn: $$n"; \
-	    continue; \
-	  fi; \
 	  shards=$$((nlines / 500 + 1)); \
 	  [ $$shards -lt $(JOBS) ] && shards=$(JOBS); \
 	  [ $$shards -gt $(SHARDS_GROW) ] && shards=$(SHARDS_GROW); \
