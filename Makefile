@@ -92,6 +92,10 @@ primes: tools seeds
 	  echo "CCAE" | gzip > $(PRIME_DIR)/4.txt.gz; \
 	  echo "prime v=4: 1"; \
 	fi
+	@if [ ! -f $(PRIME_DIR)/5.txt.gz ]; then \
+	  printf '' | gzip > $(PRIME_DIR)/5.txt.gz; \
+	  echo "prime v=5: 0"; \
+	fi
 	@for v in $$(seq 4 $$(($(VMAX) - 1))); do \
 	  vn=$$((v + 1)); \
 	  [ $$vn -eq 5 ] && continue; \
@@ -100,6 +104,14 @@ primes: tools seeds
 	  src=$(PRIME_DIR)/$$v.txt.gz; \
 	  [ -f "$$src" ] || { echo "prime v=$$v missing, stopping"; break; }; \
 	  nlines=$$($(ZC) "$$src" | wc -l); \
+	  if [ $$nlines -eq 0 ]; then \
+	    echo "grow v=$$v -> v=$$vn (empty source; prime(vn) = seed(vn)) ..."; \
+	    { $(ZC) $(SEED_DIR)/$$vn.txt.gz 2>/dev/null || true; } | sort -T $(TMP_DIR) -u | gzip > "$${out}.tmp"; \
+	    mv "$${out}.tmp" "$$out"; \
+	    n=$$($(ZC) "$$out" | wc -l); \
+	    echo "  prime v=$$vn: $$n"; \
+	    continue; \
+	  fi; \
 	  shards=$$((nlines / 500 + 1)); \
 	  [ $$shards -lt $(JOBS) ] && shards=$(JOBS); \
 	  [ $$shards -gt $(SHARDS_GROW) ] && shards=$(SHARDS_GROW); \
