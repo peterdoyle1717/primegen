@@ -1,4 +1,4 @@
-#!/usr/local/bin/python3
+#!/usr/bin/env python3
 """
 Read plantri planar_code binary output from stdin, write triangulations in
 poly format (a,b,c;a,b,c;...) to stdout.
